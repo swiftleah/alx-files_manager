@@ -1,7 +1,5 @@
 #!/usr/bin/node
 
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
 const { ObjectId } = require('mongodb');
 const redisClient = require('../utils/redis');
 const dbClient = require('../utils/db');
@@ -35,46 +33,84 @@ class FilesController {
             return res.status(400).json({ error: 'Missing data' });
         }
 
+        if (parentId !== '0') {
+            const parentFile = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
+
+            if (!parentFile) {
+                return res.status(400).json({ error: 'Parent not found' });
+            }
+
+            if (parentFile.type !== 'folder') {
+                return res.status(400).json({ error: 'Parent is not a folder' });
+            }
+        }
+
         try {
-            if (parentId !== '0') {
-                const parentFile = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
-                if (!parentFile) {
-                    return res.status(400).json({ error: 'Parent not found' });
-                }
-                if (parentFile.type !== 'folder') {
-                    return res.status(400).json({ error: 'Parent is not a folder' });
-                }
-            }
 
-            let localPath = '';
-            if (type === 'file' || type === 'image') {
-                const filePath = process.env.FOLDER_PATH || '/tmp/files_manager';
-                localPath = `${filePath}/${uuidv4()}`;
-                const fileBuffer = Buffer.from(data, 'base64');
-                fs.writeFileSync(localPath, fileBuffer);
-            }
-
-            const newFile = {
-                userId: ObjectId(userId),
-                name,
-                type,
-                isPublic,
-                parentId: ObjectId(parentId),
-                localPath: type === 'file' || type === 'image' ? localPath : undefined
-            };
-
-            const result = await dbClient.db.collection('files').insertOne(newFile);
-
-            return res.status(201).json({
-                id: result.insertedId,
-                userId,
-                name,
-                type,
-                isPublic,
-                parentId
-            });
+            return res.status(201).json(newFile);
         } catch (error) {
             console.error('Error uploading file:', error);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
+
+	static async getShow(req, res) {
+        const { 'x-token': token } = req.headers;
+
+        if (!token) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const key = `auth_${token}`;
+        const userId = await redisClient.client.get(key);
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const { id } = req.params;
+
+        try {
+            const file = await dbClient.db.collection('files').findOne({ _id: ObjectId(id), userId: ObjectId(userId) });
+
+            if (!file) {
+                return res.status(404).json({ error: 'Not found' });
+            }
+
+            return res.json(file);
+        } catch (error) {
+            console.error('Error retrieving file:', error);
+            return res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
+
+    static async getIndex(req, res) {
+        const { 'x-token': token } = req.headers;
+
+        if (!token) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const key = `auth_${token}`;
+        const userId = await redisClient.client.get(key);
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        let { parentId = '0', page = 0 } = req.query;
+        page = parseInt(page);
+
+        try {
+            const files = await dbClient.db.collection('files')
+                .find({ userId: ObjectId(userId), parentId: ObjectId(parentId) })
+                .skip(page * 20)
+                .limit(20)
+                .toArray();
+
+            return res.json(files);
+        } catch (error) {
+            console.error('Error retrieving files:', error);
             return res.status(500).json({ error: 'Internal Server Error' });
         }
     }
