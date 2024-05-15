@@ -7,6 +7,7 @@
  * async function get, set and del
  */
 const redis = require('redis');
+const { promisify } = require('util');
 
 class RedisClient {
     constructor() {
@@ -15,6 +16,10 @@ class RedisClient {
         this.client.on('error', (error) => {
             console.error('Error connecting to Redis:', error);
         });
+
+	this.getAsync = promisify(this.client.get).bind(this.client);
+	this.setAsync = promisify(this.client.set).bind(this.client);
+	this.delAsync = promisify(this.client.del).bind(this.client);
     }
 
     isAlive() {
