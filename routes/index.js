@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 /**
  * endpoints for API
  */

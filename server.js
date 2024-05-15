@@ -1,3 +1,4 @@
+#!/usr/bin/node
 /**
  * express server
  */
