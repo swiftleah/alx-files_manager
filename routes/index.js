@@ -1,15 +1,13 @@
-#!/usr/bin/node
-
 /**
  * endpoints for API
  */
-
-const express = require('express');
-const AppController = require('../controllers/AppController');
-const UsersController = require('../controllers/UsersController');
-const AuthController = require('../controllers/AuthController');
-const FilesController = require('../controllers/FilesController');
-
+import express from 'express';
+import { getStatus, getStats } from '../controllers/AppController';
+import { getConnect, disconnect } from '../controllers/AuthController';
+import { postNew, getMe } from '../controllers/UsersController';
+import {
+  postUpload, getShow, getIndex, publish, unpublish, getFile,
+} from '../controllers/FilesController';
 
 const router = express.Router();
 
@@ -61,4 +59,4 @@ router.get('/files/:id/data', async (req, res) => {
   await getFile(req, res);
 });
 
-module.exports = router;
+export default router;

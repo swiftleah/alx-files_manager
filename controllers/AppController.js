@@ -1,29 +1,20 @@
 #!/usr/bin/node
 
+import redisClient from '../utils/redis';
+import dbClient from '../utils/db';
 
-const redisClient = require('../utils/redis');
-const dbClient = require('../utils/db');
-
-class AppController {
-  static getStatus(req, res) {
-    res.status(200).json({
-      redis: redisClient.isAlive(),
-      db: dbClient.isAlive()
-    });
-  }
-
-  static async getStats(req, res) {
-    try {
-      const usersCount = await dbClient.nbUsers();
-      const filesCount = await dbClient.nbFiles();
-      res.status(200).json({
-        users: usersCount,
-        files: filesCount
-      });
-    } catch (error) {
-      res.status(500).json({ error: 'Cannot retrieve stats' });
-    }
-  }
+export function getStatus() {
+  return { redis: redisClient.isAlive(), db: dbClient.isAlive() };
 }
 
-module.exports = AppController;
+  export async function getStats() {
+    try {
+      const usersCountPromise = dbClient.nbUsers();
+      const filesCountPromise = dbClient.nbFiles();
+      const [usersCount, filesCount] = await Promise.all([usersCountPromise, filesCountPromise]);
+      return { users: usersCount, files: filesCount };
+    } catch (error) {
+      console.error('Error retrieving stats:', error);
+      throw error;
+  }
+}
