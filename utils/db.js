@@ -1,3 +1,8 @@
+/**
+ * DBClient handles operations with MongoDB db
+ * provides methods to check connection status and get num
+ * of documents in collections 'users' and 'files'
+ */
 import { MongoClient } from 'mongodb';
 
 const DB_HOST = process.env.DB_HOST || 'localhost';

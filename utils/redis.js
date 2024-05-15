@@ -1,3 +1,9 @@
+/**
+ * RedisClient class
+ * constructor creates client to redis and handles errors
+ * isAlive returns boolean for connection to Redis
+ * async function get, set and del
+ */
 const redis = require('redis');
 
 class RedisClient {
