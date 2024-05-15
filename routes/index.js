@@ -10,22 +10,55 @@ const UsersController = require('../controllers/UsersController');
 const AuthController = require('../controllers/AuthController');
 const FilesController = require('../controllers/FilesController');
 
+
 const router = express.Router();
 
-router.get('/status', AppController.getStatus);
-router.get('/stats', AppController.getStats);
+router.get('/status', (req, res) => {
+  res.json(getStatus());
+});
 
-router.post('/users', UsersController.postNew);
-router.post('/files', FilesController.postUpload);
+router.get('/stats', async (req, res) => {
+  res.json(await getStats());
+});
 
-router.get('/connect', AuthController.getConnect);
-router.get('/disconnect', AuthController.getDisconnect);
-router.get('/users/me', UsersController.getMe);
-router.get('/files/:id', FilesController.getShow);
-router.get('/files', FilesController.getIndex);
-router.put('/files/:id/publish', FilesController.putPublish);
-router.put('/files/:id/unpublish', FilesController.putUnpublish);
-router.get('/files/:id/data', FilesController.getFile);
-router.post('/files', FilesController.postUpload);
+router.post('/users', async (req, res) => {
+  await postNew(req, res);
+});
+
+router.get('/users/me', async (req, res) => {
+  await getMe(req, res);
+});
+
+router.get('/connect', async (req, res) => {
+  await getConnect(req, res);
+});
+
+router.get('/disconnect', async (req, res) => {
+  await disconnect(req, res);
+});
+
+router.post('/files', async (req, res) => {
+  await postUpload(req, res);
+});
+
+router.get('/files/:id', async (req, res) => {
+  await getShow(req, res);
+});
+
+router.get('/files', async (req, res) => {
+  await getIndex(req, res);
+});
+
+router.put('/files/:id/publish', async (req, res) => {
+  await publish(req, res);
+});
+
+router.put('/files/:id/unpublish', async (req, res) => {
+  await unpublish(req, res);
+});
+
+router.get('/files/:id/data', async (req, res) => {
+  await getFile(req, res);
+});
 
 module.exports = router;

@@ -1,42 +1,65 @@
-const Queue = require('bull');
-const thumbnail = require('image-thumbnail');
-const fs = require('fs');
-const path = require('path');
-const { ObjectId } = require('mongodb');
-const redisClient = require('./utils/redis');
+import Queue from 'bull';
+import fs from 'fs';
+import imageThumbnail from 'image-thumbnail';
+import { ObjectID } from 'mongodb';
+import dbClient from './utils/db';
 
 const fileQueue = new Queue('fileQueue');
+const userQueue = new Queue('userQueue');
 
-fileQueue.process(async (job) => {
-    const { userId, fileId } = job.data;
+async function createThumbnail(width, localPath) {
+  return imageThumbnail(localPath, { width });
+}
 
-    if (!fileId) {
-        throw new Error('Missing fileId');
-    }
+fileQueue.process(async (job, done) => {
+  console.log('Processing Started!');
+  const { fileId, userId } = job.data;
+  if (!fileId) return done(new Error('Missing fileId'));
+  if (!userId) return done(new Error('Missing userId'));
 
-    if (!userId) {
-        throw new Error('Missing userId');
-    }
+  console.log(fileId, userId);
+  try {
+    const file = await dbClient.findOne('files', { _id: new ObjectID(fileId) });
+    if (!file) throw new Error('File not found');
 
-    const file = await dbClient.db.collection('files').findOne({ name: fileId, userId: ObjectId(userId) });
-    if (!file) {
-        throw new Error('File not found');
-    }
+    const fileName = file.localPath;
+    const tNail500 = await createThumbnail(500, fileName);
+    const tNail250 = await createThumbnail(250, fileName);
+    const tNail100 = await createThumbnail(100, fileName);
 
-    const filePath = path.join(process.env.FOLDER_PATH || '/tmp/files_manager', fileId);
-    const thumbnailsFolder = path.join(process.env.FOLDER_PATH || '/tmp/files_manager', 'thumbnails');
-    if (!fs.existsSync(thumbnailsFolder)) {
-        fs.mkdirSync(thumbnailsFolder);
-    }
+    console.log('Writing thumbnail files to the system');
+    const image500 = `${file.localPath}_500`;
+    const image250 = `${file.localPath}_250`;
+    const image100 = `${file.localPath}_100`;
 
-    const sizes = [500, 250, 100];
-    const promises = sizes.map(async (size) => {
-        const thumbnailPath = path.join(thumbnailsFolder, `${fileId}_${size}`);
-        const thumbnailData = await thumbnail(filePath, { width: size });
-        fs.writeFileSync(thumbnailPath, thumbnailData);
-    });
-
-    await Promise.all(promises);
+    await Promise.all([
+      fs.promises.writeFile(image500, tNail500),
+      fs.promises.writeFile(image250, tNail250),
+      fs.promises.writeFile(image100, tNail100)
+    ]);
+    done();
+  } catch (err) {
+    console.error(err.message);
+    done(err);
+  }
 });
 
-module.exports = fileQueue;
+userQueue.process(async (job, done) => {
+  const { userId } = job.data;
+  if (!userId) return done(new Error('Missing userId'));
+
+  try {
+    const user = await dbClient.findOne('users', { _id: new ObjectID(userId) });
+    if (!user) throw new Error('User not found');
+
+    console.log(`Welcome ${user.email}`);
+    done();
+  } catch (err) {
+    console.error(err.message);
+    done(err);
+  }
+});
+
+userQueue.on('failed', (job, err) => {
+  console.error(`Error: ${err.message}`);
+});
