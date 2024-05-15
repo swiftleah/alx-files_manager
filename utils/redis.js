@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 /**
  * RedisClient class
  * constructor creates client to redis and handles errors

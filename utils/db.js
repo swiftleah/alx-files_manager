@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 /**
  * DBClient handles operations with MongoDB db
  * provides methods to check connection status and get num
